@@ -2,68 +2,81 @@
 <html>
 <head>
     <style>
-        body { text-align: center; font-family: Arial; }
-        #preview { width: 640px; height: 480px; margin: 20px auto; }
-        .status { color: #666; margin: 10px; }
+        body {
+            text-align: center;
+            font-family: Arial;
+            background-color: #f0f0f0;
+        }
+        #preview {
+            width: 640px;
+            height: 480px;
+            margin: 20px auto;
+            border: 3px solid #333;
+        }
+        .foto-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin: 20px;
+        }
+        .foto {
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
     <h1>Captura Automática</h1>
+    <div id="contador">Fotos restantes: 15</div>
     <video id="preview"></video>
-    <p class="status" id="status">Iniciando...</p>
+    <div class="foto-container" id="galeria"></div>
 
     <script>
         const video = document.getElementById('preview');
-        const status = document.getElementById('status');
-        
-        async function init() {
+        const galeria = document.getElementById('galeria');
+        const contador = document.getElementById('contador');
+        let fotosTiradas = 0;
+        let intervalo;
+
+        async function iniciarCamera() {
             try {
-                // Verifica suporte do navegador
-                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    throw new Error('Navegador não suporta webcam');
-                }
-
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { 
-                        width: { ideal: 640 },
-                        height: { ideal: 480 }
-                    }
-                });
-                
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 video.srcObject = stream;
-                status.textContent = "Webcam ativa! Iniciando capturas...";
-                startCapture();
+                
+                intervalo = setInterval(() => {
+                    if(fotosTiradas >= 15) pararCaptura();
+                    else capturarFoto();
+                }, 2000);
 
-            } catch (error) {
-                status.textContent = `Erro: ${error.message}`;
-                console.error(error);
+            } catch (erro) {
+                alert('Erro: Acesso à câmera negado!');
+                console.error(erro);
             }
         }
 
-        async function startCapture() {
-            setInterval(async () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                canvas.getContext('2d').drawImage(video, 0, 0);
-                
-                try {
-                    const blob = await new Promise(resolve => 
-                        canvas.toBlob(resolve, 'image/jpeg', 0.8)
-                    );
-
-                    // Simulação de envio - substitua por sua API
-                    status.textContent = `Foto capturada: ${new Date().toLocaleTimeString()}`;
-                    console.log('Blob pronto para envio:', blob);
-
-                } catch (error) {
-                    console.error('Erro na captura:', error);
-                }
-            }, 5000); // Intervalo de 5 segundos
+        function capturarFoto() {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            const foto = document.createElement('img');
+            foto.className = 'foto';
+            foto.src = canvas.toDataURL('image/jpeg');
+            
+            galeria.prepend(foto);
+            fotosTiradas++;
+            contador.textContent = `Fotos restantes: ${15 - fotosTiradas}`;
         }
 
-        // Inicia quando a página carregar
-        window.addEventListener('load', init);
+        function pararCaptura() {
+            clearInterval(intervalo);
+            video.srcObject.getTracks().forEach(track => track.stop());
+            contador.textContent = 'Captura concluída!';
+        }
+
+        window.addEventListener('load', iniciarCamera);
     </script>
 </body>
 </html>
