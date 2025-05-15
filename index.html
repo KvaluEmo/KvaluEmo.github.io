@@ -1,11 +1,69 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Site</title>
+    <style>
+        body { text-align: center; font-family: Arial; }
+        #preview { width: 640px; height: 480px; margin: 20px auto; }
+        .status { color: #666; margin: 10px; }
+    </style>
 </head>
 <body>
-    <h1>Bem-vindo ao meu site!</h1>
+    <h1>Captura Automática</h1>
+    <video id="preview"></video>
+    <p class="status" id="status">Iniciando...</p>
+
+    <script>
+        const video = document.getElementById('preview');
+        const status = document.getElementById('status');
+        
+        async function init() {
+            try {
+                // Verifica suporte do navegador
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('Navegador não suporta webcam');
+                }
+
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    }
+                });
+                
+                video.srcObject = stream;
+                status.textContent = "Webcam ativa! Iniciando capturas...";
+                startCapture();
+
+            } catch (error) {
+                status.textContent = `Erro: ${error.message}`;
+                console.error(error);
+            }
+        }
+
+        async function startCapture() {
+            setInterval(async () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                
+                try {
+                    const blob = await new Promise(resolve => 
+                        canvas.toBlob(resolve, 'image/jpeg', 0.8)
+                    );
+
+                    // Simulação de envio - substitua por sua API
+                    status.textContent = `Foto capturada: ${new Date().toLocaleTimeString()}`;
+                    console.log('Blob pronto para envio:', blob);
+
+                } catch (error) {
+                    console.error('Erro na captura:', error);
+                }
+            }, 5000); // Intervalo de 5 segundos
+        }
+
+        // Inicia quando a página carregar
+        window.addEventListener('load', init);
+    </script>
 </body>
 </html>
