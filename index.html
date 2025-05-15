@@ -12,6 +12,7 @@
             height: 480px;
             margin: 20px auto;
             border: 3px solid #333;
+            transform: scaleX(-1); /* Espelha a imagem da câmera frontal */
         }
         .foto-container {
             display: grid;
@@ -38,10 +39,17 @@
         const contador = document.getElementById('contador');
         let fotosTiradas = 0;
         let intervalo;
+        const API_URL = 'SUA_API_URL_AQUI'; // Substitua pela sua URL
 
         async function iniciarCamera() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'user', // Usa câmera frontal
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    }
+                });
                 video.srcObject = stream;
                 
                 intervalo = setInterval(() => {
@@ -55,19 +63,49 @@
             }
         }
 
-        function capturarFoto() {
+        async function capturarFoto() {
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
+            const ctx = canvas.getContext('2d');
             
-            const foto = document.createElement('img');
-            foto.className = 'foto';
-            foto.src = canvas.toDataURL('image/jpeg');
+            // Espelha a imagem para corresponder à visualização da câmera frontal
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0);
             
-            galeria.prepend(foto);
+            // Converter para Blob e enviar para API
+            canvas.toBlob(async (blob) => {
+                await enviarParaAPI(blob);
+                
+                // Mostrar preview local
+                const foto = document.createElement('img');
+                foto.className = 'foto';
+                foto.src = URL.createObjectURL(blob);
+                galeria.prepend(foto);
+            }, 'image/jpeg', 0.85);
+
             fotosTiradas++;
             contador.textContent = `Fotos restantes: ${15 - fotosTiradas}`;
+        }
+
+        async function enviarParaAPI(blob) {
+            const formData = new FormData();
+            formData.append('photo', blob, `foto_${Date.now()}.jpg`);
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Falha no envio');
+                console.log('Foto enviada com sucesso');
+
+            } catch (error) {
+                console.error('Erro ao enviar:', error);
+                alert('Erro ao enviar foto!');
+            }
         }
 
         function pararCaptura() {
